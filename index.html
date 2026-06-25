@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SQM Reality Calculator</title>
+
+<style>
+
+body{
+    margin:0;
+    background:#081018;
+    color:white;
+    font-family:Segoe UI,sans-serif;
+}
+
+input[type=range] {
+    width:100%;
+    margin-top:6px;
+}
+
+label {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+/* OVERLAY */
+#overlay{
+    position:fixed;
+    top:0;left:0;
+    width:100%;
+    height:100%;
+    background:black;
+    opacity:0;
+    pointer-events:none;
+    transition:0.3s;
+    z-index:5;
+}
+#overlay.active{
+    opacity:0.25;
+    pointer-events:auto;
+}
+
+/* SIDEBAR */
+#sidebar{
+    position:fixed;
+    top:0;
+    left:-270px;
+    width:270px;
+    height:100%;
+    background:#0f1622;
+    padding:20px;
+    z-index:10;
+    transition:0.3s;
+}
+#sidebar.open{left:0;}
+
+#sidebar a{
+    display:block;
+    margin:15px 0;
+    color:#6cb6ff;
+    text-decoration:none;
+}
+
+/* TOGGLE */
+#toggleBtn{
+    position:fixed;
+    top:-9px;
+    left:60px;
+    z-index:50;
+    width:94px;
+    height:24px;
+    padding:0;
+    border-radius:6px;
+    background:#2d8cff;
+    border:none;
+    cursor:pointer;
+    font-size:18px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+#toggleBtn:hover{
+    transform: scale(1.05);
+}
+
+/* MAIN */
+.container{
+    max-width:1100px;
+    margin:auto;
+    padding:25px;
+}
+
+h1{text-align:center;margin-bottom:25px;}
+
+.grid{
+    display:grid;
+    grid-template-columns:400px 1fr;
+    gap:20px;
+}
+
+.card{
+    background:#111b27;
+    border-radius:16px;
+    padding:20px;
+    transition: background 1s ease;
+}
+
+label{display:block;margin-top:12px;margin-bottom:4px;}
+
+input,select{
+    width:100%;
+    padding:10px;
+    border:none;
+    border-radius:8px;
+    background:#1c293a;
+    color:white;
+}
+
+button{
+    width:100%;
+    margin-top:15px;
+    padding:12px;
+    border:none;
+    border-radius:10px;
+    cursor:pointer;
+}
+
+.calc{background:#2d8cff;}
+.reset{background:#444;}
+
+.result{text-align:center;}
+
+.big{
+    font-size:70px;
+    color:#6cb6ff;
+    font-weight:bold;
+}
+
+.medium{text-align:center;margin-top:10px;}
+.diff{text-align:center;opacity:0.85;margin-top:10px;}
+
+table{width:100%;border-collapse:collapse;}
+td{padding:8px;border-bottom:1px solid #263649;}
+
+/* LP COLORS */
+.c0,.c1{background:#000;}
+.c2{background:#2b2b2b;}
+.c3{background:#1e4fff;}
+.c4{background:#2ecc71;}
+.c5{background:#ffd400;}
+.c6{background:#ff8c00;}
+.c7{background:#ffb347;}
+.c8{background:#FF3333;}
+.c9{background:#ffffff;color:#000;}
+
+iframe{
+    width:100%;
+    height:500px;
+    border:none;
+    border-radius:12px;
+    margin-top:15px;
+}
+
+a{color:#6cb6ff;}
+
+/* BORTLE TABLE COLORS + NELM INCLUDED */
+.b1{background:#000;}
+.b2{background:#2b2b2b;}
+.b3{background:#1e4fff;}
+.b4{background:#2ecc71;}
+.b5{background:#ffd400;}
+.b6{background:#ff8c00;color:#000;}
+.b7{background:#ffb347;}
+.b8{background:#FF3333;}
+.b9{background:#ffffff;color:#000;}
+
+footer{
+    margin-top:40px;
+    text-align:center;
+    font-size:12px;
+    opacity:0.7;
+}
+
+
+/* -----------------------------
+   MODERN SLIDER SYSTEM
+----------------------------- */
+
+input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #2d8cff, #1c293a);
+    outline: none;
+    margin-top: 8px;
+    transition: 0.2s;
+}
+
+/* Hover glow */
+input[type=range]:hover {
+    filter: brightness(1.2);
+}
+
+/* Thumb (Chrome / Edge / Safari) */
+input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 2px solid #2d8cff;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(45,140,255,0.6);
+    transition: 0.2s;
+}
+
+input[type=range]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+
+/* Firefox */
+input[type=range]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 2px solid #2d8cff;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(45,140,255,0.6);
+}
+
+/* Track (Firefox) */
+input[type=range]::-moz-range-track {
+    height: 6px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #2d8cff, #1c293a);
+}
+
+/* Active click feel */
+input[type=range]:active::-webkit-slider-thumb {
+    transform: scale(0.95);
+}
+</style>
+</head>
+
+<body>
+
+<button id="toggleBtn" onclick="toggleSidebar()">☰</button>
+<div id="overlay" onclick="toggleSidebar()"></div>
+
+<!-- SIDEBAR -->
+<div id="sidebar">
+
+<h3>Navigation</h3>
+
+<a href="#">Calculator</a>
+
+<a href="https://lightpollutionmap.app" target="_blank">
+Light Pollution Map
+</a>
+
+<a href="https://skyandtelescope.org/astronomy-resources/light-pollution-and-astronomy-the-bortle-dark-sky-scale/" target="_blank">
+Bortle Scale Descriptions
+</a>
+
+</div>
+
+<div class="container">
+
+<h1>Conditional SQM Calculator</h1>
+
+<div class="grid">
+
+<!-- INPUT -->
+<div class="card">
+
+<label>Light Pollution Map SQM</label>
+<input id="mapsqm" type="number" value="21.80" oninput="calculate()">
+
+<label>Altitude</label>
+<input id="altitude" type="number" value="250" oninput="calculate()">
+
+<label>Transparency</label>
+<select id="transparency" onchange="calculate()">
+<option value="0.6">Extremely Bad</option>
+<option value="0.4">Poor</option>
+<option value="0.25">Below Average</option>
+<option value="0">Average</option>
+<option value="-0.1">Above Average</option>
+<option value="-0.2">Excellent</option>
+<option value="-0.3">Perfect</option>
+</select>
+
+<label>Airglow</label>
+<select id="airglow" onchange="calculate()">
+<option value="0">Insignificant</option>
+<option value="0.1">Faint</option>
+<option value="0.25" selected>Average</option>
+<option value="0.45">Strong</option>
+<option value="1.00">Aurora G1</option>
+<option value="1.40">Aurora G2</option>
+<option value="1.80">Aurora G3</option>
+<option value="2.40">Aurora G4</option>
+<option value="3.00">Aurora G5</option>
+</select>
+
+<label>Aerosols</label>
+<select id="aerosols" onchange="calculate()">
+<option value="-0.05">Weak</option>
+<option value="0" selected>Average</option>
+<option value="0.2">Strong</option>
+</select>
+
+<label>Milky Way</label>
+<select id="milky" onchange="calculate()">
+<option value="0">None</option>
+<option value="0.08" selected>Average</option>
+<option value="0.18">Strong</option>
+</select>
+
+<label>Moon <span id="moonAngle">0°</span></label>
+<input id="moon" type="range" min="0" max="90" value="0" oninput="updateAngles(); calculate()">
+
+<label>
+  Moon Phase (<span id="moonPhaseDisplay">0%</span>)
+</label>
+
+<input id="moonPhase" type="range" min="0" max="100" value="0" oninput="updateMoonPhase(); calculate()">
+
+<label>Venus (-4.00 Mag) <span id="venusAngle">0°</span></label>
+<input id="venus" type="range" min="0" max="90" value="0" oninput="updateAngles(); calculate()">
+
+<label>Jupiter (-2.50 Mag) <span id="jupiterAngle">0°</span></label>
+<input id="jupiter" type="range" min="0" max="90" value="0" oninput="updateAngles(); calculate()">
+
+<label>Sirius (-1,46 Mag) <span id="siriusAngle">0°</span></label>
+<input id="sirius" type="range" min="0" max="90" value="0" oninput="updateAngles(); calculate()">
+
+<button class="calc" onclick="calculate()">Calculate Sky Brightness</button>
+<button class="reset" onclick="location.reload()">Reset</button>
+
+</div>
+
+<!-- OUTPUT -->
+<div>
+
+<div class="card result" id="resultCard">
+
+<div>Predicted SQM</div>
+<div class="big" id="sqmResult">--</div>
+
+<div class="medium" id="bortleResult">Press Calculate</div>
+
+<div class="medium" id="bortleDecimal"
+     style="font-size:32px;font-weight:bold;">
+    Bortle: --
+</div>
+
+
+</div>
+ㅤ
+<div class="card">
+<h3>Breakdown</h3>
+<table>
+<tr><td>Map SQM</td><td id="mapRow">--</td></tr>
+<tr><td>Altitude</td><td id="altRow">--</td></tr>
+<tr><td>Transparency</td><td id="transRow">--</td></tr>
+<tr><td>Airglow</td><td id="airRow">--</td></tr>
+<tr><td>Aerosols</td><td id="aerRow">--</td></tr>
+<tr><td>Milky Way</td><td id="mwRow">--</td></tr>
+<tr><td>Moon</td><td id="moonRow">--</td></tr>
+<tr><td>Venus</td><td id="venusRow">--</td></tr>
+<tr><td>Jupiter</td><td id="jupiterRow">--</td></tr>
+<tr><td>Sirius</td><td id="siriusRow">--</td></tr>
+</table>
+</div>
+
+</div>
+</div>
+<h4>This calculator is used to accurately estimate a location's actual darkness. Many sources that are usually used to find dark skies give out raw SQM data, not accounting for the conditions. This can lead to huge differences between the estimated light pollution and what it actually is like over there. This is why I have coded this tool, that can calculate the darkness of an area using atmospheric and other conditions such as transparency, airglow, aerosols, the moon, planets, etc...</h4>
+<h3>How to use this?</h3>
+<h4>To calculate the actual darkness of locations, this calculator comes in handy. Simply insert the light pollution map's estimate in "Light Pollution Map SQM", and then, enter the details for your location, such as altitude, transparency, airglow, etc... You can use websites such as https://www.astrospheric.com to predict transparency and other conditions. The calculation will automatically be done when you change parameters.</h4>
+
+<h4>Below are descriptions/depictions of what the sky looks like for each level of light pollution according to the bortle scale and SQM readings. You can also find studies conducted by David J. Lorenz on light pollution analysises and estimations (My sources for this page).</h4>
+<!-- SOURCE -->
+<div class="card" style="margin-top:20px">
+<a href="https://djlorenz.github.io/astronomy/lp" target="_blank">
+Source for updated Light Pollution Map Analysis
+</a>
+</div>
+
+<!-- BORTLE TABLE -->
+<div class="card" style="margin-top:20px">
+
+<h2>The Bortle Scale</h2>
+
+<table>
+
+<tr class="Descriptins"><td>Bortle</td><td>SQM</td><td>What does it look like?</td></tr>
+
+<tr class="b1"><td>1</td><td>21.9–22.2</td><td>NELM 7.6–8.0 — An untouched night sky with no light pollution at all. The Milky Way is extremely bright and detailed, casting visible structure and even faint shadows on the ground. Zodiacal light, airglow, and deep-sky objects are all easily visible to the naked eye.</td></tr>
+
+<tr class="b2"><td>2</td><td>21.7–21.9</td><td>NELM 7.1–7.5 — Very dark skies with only the faintest traces of artificial light. The Milky Way is highly structured and impressive, and faint galaxies like M33 can be seen without optical aid. The sky still feels natural and deeply immersive.</td></tr>
+
+<tr class="b3"><td>3</td><td>21.4–21.6</td><td>NELM 6.6–7.0 — A mostly dark rural sky with some light domes near the horizon. The Milky Way remains strong overhead but begins to lose detail closer to the horizon. Dark nebulae are still visible, though less striking than in darker classes.</td></tr>
+
+<tr class="b4"><td>4</td><td>20.4–21.3</td><td>NELM 6.1–6.5 — A mix between rural darkness and suburban glow. Light pollution is noticeable in multiple directions. The Milky Way is still visible but clearly weakened, especially near the horizon, and deep-sky detail begins to fade.</td></tr>
+
+<tr class="b5"><td>5</td><td>19.4–20.3</td><td>NELM 5.6–6.0 — Moderate light pollution dominates the sky. The Milky Way is faint and often only visible overhead on good nights. Many deep-sky objects require optical aid, and the sky has a noticeable gray or orange glow.</td></tr>
+
+<tr class="b6"><td>6</td><td>18.6–19.3</td><td>NELM 5.0–5.5 — Strong light pollution washes out most faint structures in the sky. The Milky Way is very difficult to see or completely invisible. Only brighter deep-sky objects like M31 are detectable, and the sky has a strong artificial glow.</td></tr>
+
+<tr class="b7"><td>7</td><td>18.1–18.5</td><td>NELM 4.0–5.0 — Heavy light pollution severely reduces sky visibility. The Milky Way is gone, and only the brightest stars remain visible. Constellations are incomplete, and the sky background is bright and grayish.</td></tr>
+
+<tr class="b8"><td>8</td><td>17.9–18.0</td><td>NELM 3.0–4.0 — Severe light pollution dominates the night sky. Only a handful of stars are visible, and even bright deep-sky objects are very difficult to observe. The sky is typically orange or white depending on lighting types.</td></tr>
+
+<tr class="b9"><td>9</td><td>&lt;17.9</td><td>NELM &lt;3 — Extreme light pollution conditions. The night sky is bright enough that only the Moon, planets, and a few of the brightest stars can be seen. The Milky Way is completely invisible, even on the clearest nights.</td></tr>
+
+</table>
+</div>
+
+
+<h4>Here is a Light Pollution map, use it to find the Light Pollution Map SQM:</h4>
+<!-- OVERLAY -->
+<div class="card" style="margin-top:20px">
+<h2>Light Pollution map</h2>
+<iframe src="https://djlorenz.github.io/astronomy/lp/overlay/dark.html"></iframe>
+</div>
+
+<!-- FOOTER -->
+<footer>
+Credits: SQM model inspired by astronomical sky brightness research, Bortle scale classification by John E. Bortle.  
+Light pollution mapping data courtesy of public astronomical visualization projects.  
+</footer>
+
+</div>
+
+<script>
+
+function toggleSidebar(){
+    document.getElementById("sidebar").classList.toggle("open");
+    document.getElementById("overlay").classList.toggle("active");
+}
+
+/* ----------------------------
+   CORE HELPERS
+---------------------------- */
+
+function altitudePenalty(m){
+    let bonus = m / 3000 * 0.25;
+    return Math.min(bonus, 0.25);
+}
+
+function atmosphereFactor(altMeters){
+    let t = altMeters;
+
+    if(t <= 0) return 1;
+    if(t >= 400000) return 0;
+
+    if(t <= 10000){
+        return 1 - (t / 10000) * 0.6;
+    }
+
+    let extra = (t - 10000) / (400000 - 10000);
+    return (1 - 0.6) * (1 - extra);
+}
+
+function transparencyFactor(val){
+    let t = parseFloat(val);
+
+    let min = 0.4;
+    let max = 1.5;
+
+    let norm = (t + 0.3) / 0.9;
+
+    return min + norm * (max - min);
+}
+
+function objectPenalty(altitude, base){
+    if(altitude <= 0) return 0;
+
+    let a = parseFloat(altitude);
+    let x = a / 90;
+
+    return base * (
+        (1 - Math.exp(-6 * x)) * 0.6 +
+        (1 - Math.exp(-1.5 * x)) * 0.4
+    );
+}
+
+function saturationFactor(sqm){
+    if(sqm >= 18.0) return 1;
+    if(sqm <= 14.5) return 0;
+
+    let x = (sqm - 14.5) / (18.0 - 14.5);
+    return x * x;
+}
+
+function earthSQMCap(sqm){
+    const MAX = 22.2;
+    if(sqm <= MAX) return sqm;
+
+    let excess = sqm - MAX;
+    return MAX + excess * Math.exp(-5 * excess);
+}
+
+function getBortleColor(sqm){
+    if(sqm >= 21.9) return "#000000";
+    if(sqm >= 21.7) return "#2b2b2b";
+    if(sqm >= 21.4) return "#1e4fff";
+    if(sqm >= 20.4) return "#2ecc71";
+    if(sqm >= 19.4) return "#ffd400";
+    if(sqm >= 18.6) return "#ff8c00";
+    if(sqm >= 18.1) return "#ffb347";
+    if(sqm >= 17.9) return "#ff4747";
+    return "#d9d9d9";
+}
+
+/* ----------------------------
+   ANGLES UI
+---------------------------- */
+
+function updateAngles(){
+    moonAngle.textContent = moon.value + "°";
+    venusAngle.textContent = venus.value + "°";
+    jupiterAngle.textContent = jupiter.value + "°";
+    siriusAngle.textContent = sirius.value + "°";
+}
+function earthSQMFloor(sqm){
+    const MIN = 16.0;
+    return Math.max(sqm, MIN);
+}
+/* ----------------------------
+   MAIN CALCULATION
+---------------------------- */
+function updateMoonPhase(){
+    moonPhaseDisplay.textContent = moonPhase.value + "%";
+}
+function compressBrightSky(sqm){
+
+    // No compression for normal/dark skies
+    if(sqm >= 18) return sqm;
+
+    // Compression begins below 18
+    const floor = 16.0;
+
+    let deficit = 18 - sqm;
+
+    return floor + (18 - floor) * Math.exp(-0.60 * deficit);
+}
+function calculate(){
+
+    let sqm = parseFloat(mapsqm.value);
+
+    const alt = parseFloat(altitude.value);
+    const atmF = atmosphereFactor(alt);
+    const transF = transparencyFactor(transparency.value);
+    const sat = saturationFactor(sqm);
+
+    sqm += altitudePenalty(alt);
+
+    function applyObject(val, baseLimit){
+        let base = objectPenalty(val, baseLimit);
+        return base * atmF * transF * 0.5;
+    }
+
+    /* SKY COMPONENTS */
+    let transC = parseFloat(transparency.value) * sat;
+    let airC   = parseFloat(airglow.value) * sat;
+    let aerC   = parseFloat(aerosols.value) * sat;
+    let mwC    = parseFloat(milky.value) * sat;
+
+    sqm -= (transC + airC + aerC + mwC);
+
+    /* ---------------- MOON ---------------- */
+
+    let moonBase = applyObject(moon.value, 5.0) * sat;
+
+    // 0% = no moon, 100% = full moon
+    let moonPhaseFactor = parseFloat(moonPhase.value) / 100;
+
+    let moonP = moonBase * moonPhaseFactor;
+
+    let venusP   = applyObject(venus.value, 0.20) * sat;
+    let jupiterP = applyObject(jupiter.value, 0.08) * sat;
+    let siriusP  = applyObject(sirius.value, 0.03) * sat;
+
+    sqm -= (moonP + venusP + jupiterP + siriusP);
+
+    /* ---------------------------------------------------
+       PHYSICAL LIMITS
+    --------------------------------------------------- */
+
+    sqm = compressBrightSky(sqm);
+    sqm = earthSQMCap(sqm);
+
+    /* OUTPUT */
+
+    sqmResult.textContent = sqm.toFixed(2);
+
+    let bortle;
+
+    if(sqm >= 21.9) bortle=1;
+    else if(sqm >= 21.7) bortle=2;
+    else if(sqm >= 21.4) bortle=3;
+    else if(sqm >= 20.4) bortle=4;
+    else if(sqm >= 19.4) bortle=5;
+    else if(sqm >= 18.6) bortle=6;
+    else if(sqm >= 18.1) bortle=7;
+    else if(sqm >= 17.9) bortle=8;
+    else bortle=9;
+
+    bortleResult.textContent = "Estimated:";
+
+    /* DECIMAL BORTLE */
+    let bortleDecimalValue;
+
+    if(sqm >= 21.9)
+        bortleDecimalValue = 1 + (22.2 - sqm) / 0.3;
+
+    else if(sqm >= 21.7)
+        bortleDecimalValue = 2 + (21.9 - sqm) / 0.2;
+
+    else if(sqm >= 21.4)
+        bortleDecimalValue = 3 + (21.7 - sqm) / 0.3;
+
+    else if(sqm >= 20.4)
+        bortleDecimalValue = 4 + (21.4 - sqm) / 1.0;
+
+    else if(sqm >= 19.4)
+        bortleDecimalValue = 5 + (20.4 - sqm) / 1.0;
+
+    else if(sqm >= 18.6)
+        bortleDecimalValue = 6 + (19.4 - sqm) / 0.8;
+
+    else if(sqm >= 18.1)
+        bortleDecimalValue = 7 + (18.6 - sqm) / 0.5;
+
+    else if(sqm >= 17.9)
+        bortleDecimalValue = 8 + (18.1 - sqm) / 0.2;
+
+    else
+        bortleDecimalValue = 9;
+
+    bortleDecimal.textContent =
+        "Bortle: " + bortleDecimalValue.toFixed(1);
+        
+    resultCard.style.background = getBortleColor(sqm);
+
+    difference.textContent =
+        "Difference: " +
+        (sqm - parseFloat(mapsqm.value)).toFixed(2) +
+        " mag/arcsec²";
+
+    /* ---------------- BREAKDOWN ---------------- */
+
+    mapRow.textContent =
+        parseFloat(mapsqm.value).toFixed(2);
+
+    altRow.textContent =
+        "+" + altitudePenalty(alt).toFixed(2);
+
+    transRow.textContent =
+        transC.toFixed(3) +
+        " (×" + transF.toFixed(2) + ")";
+
+    airRow.textContent =
+        airC.toFixed(3) +
+        " (raw " + airglow.value + ")";
+
+    aerRow.textContent =
+        aerC.toFixed(3) +
+        " (raw " + aerosols.value + ")";
+
+    mwRow.textContent =
+        mwC.toFixed(3) +
+        " (raw " + milky.value + ")";
+
+    moonRow.textContent =
+        moonP.toFixed(3) +
+        " (phase " + moonPhase.value +
+        "%, ×atm " + atmF.toFixed(2) +
+        ", ×trans " + transF.toFixed(2) + ")";
+
+    venusRow.textContent =
+        venusP.toFixed(3) +
+        " (×atm " + atmF.toFixed(2) +
+        ", ×trans " + transF.toFixed(2) + ")";
+
+    jupiterRow.textContent =
+        jupiterP.toFixed(3) +
+        " (×atm " + atmF.toFixed(2) +
+        ", ×trans " + transF.toFixed(2) + ")";
+
+    siriusRow.textContent =
+        siriusP.toFixed(3) +
+        " (×atm " + atmF.toFixed(2) +
+        ", ×trans " + transF.toFixed(2) + ")";
+}
+
+/* ----------------------------
+   RESET
+---------------------------- */
+
+function resetCalculator(){
+
+    mapsqm.value = "21.80";
+    altitude.value = "500";
+
+    transparency.value = "0";
+    airglow.value = "0.25";
+    aerosols.value = "0";
+    milky.value = "0.08";
+
+    moon.value = 0;
+    moonPhase.value = 100;
+
+    venus.value = 0;
+    jupiter.value = 0;
+    sirius.value = 0;
+
+    updateAngles();
+    calculate();
+}
+
+
+</script>
+
+</body>
+</html>
