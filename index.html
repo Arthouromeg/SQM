@@ -153,10 +153,10 @@ footer{margin-top:40px;padding:20px 0 32px;text-align:center;font-size:12px;colo
           <option value="0.6">Extremely Bad</option>
           <option value="0.4">Poor</option>
           <option value="0.25">Below Average</option>
-          <option value="0" selected>Average</option>
-          <option value="-0.075">Above Average</option>
-          <option value="-0.15">Excellent</option>
-          <option value="-0.2">Perfect</option>
+          <option value="0.15" selected>Average</option>
+          <option value="-0.0">Above Average</option>
+          <option value="-0.1">Excellent</option>
+          <option value="-0.3">Perfect</option>
         </select>
       </div>
       <div class="field">
@@ -256,7 +256,7 @@ footer{margin-top:40px;padding:20px 0 32px;text-align:center;font-size:12px;colo
         <div class="dome-container">
           <canvas id="domeCanvas"></canvas>
         </div>
-        <div style="margin-top:8px;font-size:11px;color:var(--text3);text-align:center;">Slow auto-rotation around celestial pole &middot; overlays update with parameters</div>
+        <div style="margin-top:8px;font-size:11px;color:var(--text3);text-align:center;">!WARNING! &middot; Calculator's accuracy is best in high SQMs</div>
       </div>
     </div>
   </div>
@@ -738,27 +738,76 @@ function pixelToSkyCoords(px, py, R, cx, cy){
   No if(elev > reach) return 0. No cutoff. No pocket.
 */
 function lpGlowAtElev(elev, lpI, aerosolFactor, transFactor){
+
   aerosolFactor = aerosolFactor || 1.0;
-  transFactor   = transFactor || 1.0;
+  transFactor   = transFactor   || 1.0;
 
-  var scatter = Math.max(0.6, aerosolFactor * transFactor);
+  /* Atmospheric scattering */
+  var scatter =
+      Math.max(0.4, aerosolFactor) *
+      Math.pow(Math.max(0.1, transFactor), 1.8);
 
-  /* smooth floor */
-  var floor = Math.pow(lpI, 0.8) * 0.18 * scatter;
+  /* LP response curve (tweakable) */
+  var LP_POWER = 2.0;
 
-  /* smooth horizon enhancement */
-  var reach = 1.0;
-  var normElev = Math.min(1, elev / reach);
+  /* Stronger increase as LP worsens */
+  var s = Math.max(0, Math.min(1, lpI));
+  s = Math.pow(s, LP_POWER);
 
-  var horizCurve = (1 - normElev);
-  horizCurve = horizCurve * horizCurve;
+  /*
+    As LP increases, flatten the glow.
+    Prevents the "40° ring" effect.
+  */
+  var gradientPower =
+      2.2 - 1.6 * s;
 
-  var extra = Math.pow(lpI, 1.15) * 1.20 * horizCurve * scatter;
+  var horizCurve =
+      Math.pow(1 - elev, gradientPower);
+
+  /*
+    Whole-sky brightness floor.
+    This is what makes severe LP brighten
+    the entire sky rather than just lifting
+    the glow higher.
+  */
+  var floor =
+      1.00 *
+      s *
+      scatter;
+
+  /*
+    Main LP dome.
+  */
+  var extra =
+      0.90 *
+      Math.sqrt(s) *
+      horizCurve *
+      scatter;
+
+  /*
+    Bright horizon base.
+    Mimics real city domes where the horizon
+    itself is intensely bright.
+  */
+  var BASE_STRENGTH = 0.3;
+  var BASE_HEIGHT   = 0.08;
+
+  var baseGlow =
+      Math.exp(
+          -Math.pow(
+              elev / BASE_HEIGHT,
+              2
+          )
+      ) *
+      BASE_STRENGTH *
+      Math.sqrt(s);
+
+  extra += baseGlow * scatter;
 
   return {
-    floor: floor,
-    curve: extra,
-    total: floor + extra
+      floor: floor,
+      curve: extra,
+      total: floor + extra
   };
 }
 
@@ -786,7 +835,7 @@ function airglowAtElev(elev, airRaw, lpI, aerosolFactor){
      Strong aurora: large floor — the whole sky glows. */
   var floor;
   if(airRaw < 1.0){
-    floor = airRaw * 0.04 * suppress; /* faint even at zenith */
+    floor = airRaw * 0.04 * suppress * -5; /* faint even at zenith */
   } else if(airRaw < g3){
     var t = (airRaw - 1.0) / (g3 - 1.0);
     floor = (0.04 + t * 0.35) * airRaw * suppress;
@@ -824,24 +873,31 @@ function airglowAtElev(elev, airRaw, lpI, aerosolFactor){
 */
 function moonAtElev(elev, moonAlt, moonPh, aerosolFactor, transFactor){
   if(moonAlt <= 0 || moonPh <= 0.02) return 0;
+
   aerosolFactor = aerosolFactor || 1.0;
   transFactor   = transFactor   || 1.0;
-  var scatter = Math.max(0.7, aerosolFactor * transFactor);
 
-  /* Raw moon intensity: phase * sin(alt) * 3× boost */
-  var moonI = moonPh * Math.sin(moonAlt * Math.PI / 180) * 3.0;
-  moonI = Math.min(2.0, moonI);
+  /* transparency strongly affects moonlight */
+  var scatter =
+      Math.max(0.25, aerosolFactor * 0.7) *
+      Math.pow(Math.max(0.05, transFactor), 1.8);
 
-  /* FLOOR: the whole-sky ambient lift from the moon.
-     Full moon (moonI~1) at high altitude → floor ~0.18
-     Quarter moon low → floor ~0.04  */
-  var floor = moonI * 0.18 * scatter;
+  /* ~60% of original brightness */
+  var moonI =
+      moonPh *
+      Math.sin(moonAlt * Math.PI / 180) *
+      1.8;
 
-  /* EXTRA: x² horizon curve on top of floor */
+  moonI = Math.min(1.2, moonI);
+
+  /* whole-sky ambient lift */
+  var floor = moonI * 0.12 * scatter;
+
+  /* brighter toward horizon */
   var horizCurve = (1 - elev) * (1 - elev);
-  var extra = moonI * horizCurve * 1.40 * scatter;
+  var extra = moonI * horizCurve * 0.80 * scatter;
 
-  return Math.min(3.5, floor + extra);
+  return Math.min(2.0, floor + extra);
 }
 
 /* ── Main draw ── */
@@ -853,7 +909,7 @@ function drawDome(){
   ctx.clearRect(0, 0, size, size);
 
   /* Physics parameters */
-  var lpI   = Math.max(0, Math.min(1, (22.2 - lastMapSQM) / 5.5));
+  var lpI = Math.max(0, Math.min(1, (22.0 - Math.min(22.0, lastMapSQM)) / 5.5));
   var airRaw= lastAir;
   var moonAlt = parseFloat(document.getElementById('moon').value);
   var moonPh  = parseFloat(document.getElementById('moonPhase').value) / 100;
